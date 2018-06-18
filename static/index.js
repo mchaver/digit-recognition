@@ -272,6 +272,30 @@ function nothing() {
   document.getElementById("answer_reaction").innerHTML = "Well, the models on this site can recognize only digits... But you can draw anything, if you like :)";
 }
 
+function train() {
+  var canvas = document.getElementById("canvas");
+  var dataURL = canvas.toDataURL('image/jpg');
+  var params = JSON.stringify({image_base64: dataURL, tag: '1'});
+
+  var http = new XMLHttpRequest();
+
+  http.onreadystatechange = function() {
+    if (http.readyState == XMLHttpRequest.DONE) {
+      if (http.status == 200) {
+        console.log('200 status');
+      } else if (http.status == 400) {
+        console.log('400 status');
+      } else {
+        console.log('other status');
+      }
+    }
+  };
+
+  http.open('POST', '/train', true);
+  http.setRequestHeader('Content-Type', 'application/json');
+  http.send(params);
+}
+
 function predict() {
   console.log("predict");
   
@@ -316,20 +340,8 @@ function predict() {
     }
   };
 
-  // http.open('POST', 'http://localhost:8000/image', true);
-  http.open('POST', '/image', true);
-
+  http.open('POST', '/predict', true);
   http.setRequestHeader('Content-Type', 'application/json');
-  
-  http.setRequestHeader('Access-Control-Allow-Credentials', 'true');
-  http.setRequestHeader('Access-Control-Allow-Origin', '*');
-  http.setRequestHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  
-  // header("Access-Control-Allow-Origin: *");
-  //   header('Access-Control-Allow-Credentials: true');    
-  //   header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); 
-  // http.withCredentials = false;
-  // http.withCredentials = true;
   http.send(params);
   
   // $.ajax({

@@ -1,10 +1,12 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket;
-use rocket::http::RawStr;
-extern crate rocket_contrib;
+extern crate nn;
 
+extern crate rocket;
+extern crate rocket_contrib;
+use rocket::response::content;
+use rocket::response::status;
 use rocket_contrib::Json;
 
 
@@ -28,11 +30,23 @@ use rocket::response::NamedFile;
 
 
 extern crate image;
-use image::GenericImage;
 use image::FilterType;
+
+use std::fs;
+
+#[macro_use] extern crate lazy_static;
+use regex::Regex;
+extern crate regex;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DigitImage {
     image_base64: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DigitImageForTraining {
+    image_base64: String,
+    tag: String,
 }
 
 #[get("/")]
@@ -45,55 +59,72 @@ fn files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
 }
 
-/*
-image_b64 = request.values['imageBase64']
-		image_encoded = image_b64.split(',')[1]
-		image = base64.decodebytes(image_encoded.encode('utf-8'))		
-prediction = model.predict(image) 
-*/
+#[post("/predict", format = "application/json", data = "<image>")]
+fn predict(image: Json<DigitImage>) -> content::Json<String> {
+    content::Json("{ 'error': 'image payload was incorrect' }".to_string())   
+}
 
-#[post("/image", format = "application/json", data = "<image>")]
-fn image(image: Json<DigitImage>) -> &'static str {
-    println!("image called");
-    let split = image.image_base64.split(",");
-    let vec = split.collect::<Vec<&str>>();
-    if vec.len() > 0 {
-        match decode(vec[1]) {
+#[post("/train", format = "application/json", data = "<image>")]
+fn train(image: Json<DigitImageForTraining>) -> content::Json<String> {
+    let img_string = image.image_base64.split(",").collect::<Vec<&str>>();
+    if img_string.len() > 0 {
+        match decode(img_string[1]) {
             Ok(img_data) => {
-
-
-                //let buffer: &[u8] = ...; // Generate the image data
-
-                // Save the buffer as "image.png"
-                // image::save_buffer(&Path::new("image.png"), buffer, 800, 600, image::RGBA(8))
-                // image::save_buffer(&Path::new("test2.jpg"), &img_data, 200, 200, image::RGB(8));
-                
-                match File::create("test1.png") {
+                match File::create("temp.png") {
                     Ok(mut buffer) => {
-                        buffer.write(&img_data);
-                        println!("open test1.png");
-                        match image::open("test1.png") {
-                            Ok(imgg) => {
-                                println!("opened");
-                                let ref mut ab = imgg.resize_exact(28,28, FilterType::Nearest);
-                                // let ref mut fout = File::create("test2.png").unwrap();
-                                // Write the contents of this image to the Writer in PNG format.
-                                ab.save("test2.png").unwrap();
-                                ab.save("test2.jpg").unwrap();
-                                ()
+                        match buffer.write(&img_data) {
+                            Ok(_write_res) => {
+                                match image::open("temp.png") {
+                                    Ok(img) => {
+                                        let mut count: u32 = 0;
+                                        lazy_static! {
+                                            static ref COUNT: Regex = Regex::new(r"^\d{1}-(\d+)").unwrap();
+                                        }
+                                        let paths = fs::read_dir("./").unwrap();
+                                        // path.unwrap().path().display()
+                                        for path in paths {
+                                            let path_name = path.unwrap().path().display().to_string();
+                                            let cap = COUNT.captures(&path_name).unwrap();
+                                            if cap.len() > 0 {
+                                                let loc_count: u32 = cap[1].parse().unwrap();
+                                                if loc_count > count {
+                                                    count = loc_count;
+                                                }
+                                            }
+                                        }
+                                        let ref mut img_resized = img.resize_exact(28,28, FilterType::Nearest);
+                                        let file_name = format!("{}-{}.png", image.tag, count);
+                                        img_resized.save(file_name).unwrap();
+                                        content::Json("{ 'result': 'image has been saved' }".to_string())
+                                    },
+                                    Err(err) => {
+                                        let err_str = format!("'error':'{}'", err.to_string());
+                                        content::Json(err_str)
+                                    },
+                                }
                             },
-                            Err(err) => println!("{}", err),
+                            Err(err) => {
+                                let err_str = format!("'error':'{}'", err.to_string());
+                                content::Json(err_str)
+                            },
                         }
                     },
-                    Err(err) => println!("{}", err),
+                    Err(err) => {
+                        let err_str = format!("'error':'{}'", err.to_string());
+                        content::Json(err_str)
+                    },
                 }},
-            Err(err) => println!("{}", err),
+            Err(err) => {
+                let err_str = format!("'error':'{}'", err.to_string());
+                content::Json(err_str)
+            },
         }
         // Writes some prefix of the byte string, not necessarily all of it.
+    } else {
+        content::Json("{ 'error': 'image payload was incorrect' }".to_string())
     }
-    "hello"
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, image, files]).launch();
+    rocket::ignite().mount("/", routes![index, files, predict, train]).launch();
 }

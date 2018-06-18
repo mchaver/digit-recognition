@@ -10,9 +10,15 @@ rocket_codegen = "0.3.12"
 rocket_contrib = "0.3.12"
 base64 = "0.9.2"
 image = "0.19.0"
+regex = "0.2"
 serde_derive = "1.0.66"
 serde = "1.0.66"
 serde_json = "1.0.20"
+lazy_static = "1.0"
+
+[lib]
+name = "nn"
+path = "src/nn/lib.rs"
 
 [[bin]]
 name = "server"
