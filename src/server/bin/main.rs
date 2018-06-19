@@ -34,10 +34,6 @@ use image::FilterType;
 
 use std::fs;
 
-#[macro_use] extern crate lazy_static;
-use regex::Regex;
-extern crate regex;
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DigitImage {
     image_base64: String,
@@ -64,6 +60,20 @@ fn predict(image: Json<DigitImage>) -> content::Json<String> {
     content::Json("{ 'error': 'image payload was incorrect' }".to_string())   
 }
 
+fn get_file_count(path_name: String) -> Option<u32> {
+    let path_pieces = path_name.split("/").collect::<Vec<_>>();
+    if path_pieces.len() > 0 {
+        let file_name_pieces = path_pieces[path_pieces.len() - 1].split(".").collect::<Vec<_>>();
+        if file_name_pieces.len() > 0 {
+            file_name_pieces[0].parse().ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 #[post("/train", format = "application/json", data = "<image>")]
 fn train(image: Json<DigitImageForTraining>) -> content::Json<String> {
     let img_string = image.image_base64.split(",").collect::<Vec<&str>>();
@@ -76,24 +86,27 @@ fn train(image: Json<DigitImageForTraining>) -> content::Json<String> {
                             Ok(_write_res) => {
                                 match image::open("temp.png") {
                                     Ok(img) => {
-                                        let mut count: u32 = 0;
-                                        lazy_static! {
-                                            static ref COUNT: Regex = Regex::new(r"^\d{1}-(\d+)").unwrap();
+                                        let dir_name = format!("./{}", image.tag);
+                                        if !Path::new(&dir_name.clone()).exists() {
+                                            fs::create_dir(dir_name.clone()).unwrap();
                                         }
-                                        let paths = fs::read_dir("./").unwrap();
-                                        // path.unwrap().path().display()
-                                        for path in paths {
-                                            let path_name = path.unwrap().path().display().to_string();
-                                            let cap = COUNT.captures(&path_name).unwrap();
-                                            if cap.len() > 0 {
-                                                let loc_count: u32 = cap[1].parse().unwrap();
-                                                if loc_count > count {
-                                                    count = loc_count;
-                                                }
-                                            }
-                                        }
+                                        let paths = fs::read_dir(dir_name.clone()).unwrap().collect::<Vec<_>>();
+                                        let count = paths.len();
+                                        // for path in paths {
+                                        //     let p = path.unwrap().path();
+                                        //     if p.is_file() {
+                                        //         match get_file_count(p.display().to_string()) {
+                                        //             Ok(count) => {
+                                        //                 if loc_count > count {
+                                        //                 count = loc_count;
+                                        //                 }
+                                        //             },
+                                        //             None => ()
+                                        //         }
+                                        //     }
+                                        // }
                                         let ref mut img_resized = img.resize_exact(28,28, FilterType::Nearest);
-                                        let file_name = format!("{}-{}.png", image.tag, count);
+                                        let file_name = format!("./{}/{}.png", image.tag, count);
                                         img_resized.save(file_name).unwrap();
                                         content::Json("{ 'result': 'image has been saved' }".to_string())
                                     },

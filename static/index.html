@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <title>Digit Recognition</title>
-    <link href="static/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="index.css"></link>
 
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
@@ -21,9 +21,10 @@
       <div>
         <canvas id="canvas" width="200" height="200" align="center">Canvas</canvas><br>
       </div>
-      <div>
+      <div align="center">
         <button type="button" onclick="clearCanvas()" align="center">Clear</button>
         <button type="button" onclick="predict()" align="center">Predict</button>
+        <button type="button" onclick="train()" align="center">Train</button>
       </div>
     </div>
 

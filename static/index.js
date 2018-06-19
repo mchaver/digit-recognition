@@ -208,26 +208,26 @@ function findPos (obj) {
 
 
 function clearCanvas() {
-    context.clearRect (0, 0, 200, 200);
+  context.clearRect (0, 0, 200, 200);
   draw();
-  document.getElementById("hide_show_btn").style.display = "none";
-  document.getElementById("prediction").style.display = "none";
-  document.getElementById("hidable").style.display = "none";
-  document.getElementById("digit_form").style.display = "none";
-  document.getElementById("answer_reaction").innerHTML = "";
-  document.getElementById("rec_result").innerHTML = "";
-  document.getElementById("fnn1").style.color = 'gray';
-  document.getElementById("fnn2").style.color = 'gray';
-  document.getElementById("fnn3").style.color = 'gray';
-  document.getElementById("fnn_t1").style.color = 'gray';
-  document.getElementById("fnn_t2").style.color = 'gray';
-  document.getElementById("fnn_t3").style.color = 'gray';
-  document.getElementById("cnn1").style.color = 'gray';
-  document.getElementById("cnn2").style.color = 'gray';
-  document.getElementById("cnn3").style.color = 'gray';
-  document.getElementById("cnn_t1").style.color = 'gray';
-  document.getElementById("cnn_t2").style.color = 'gray';
-  document.getElementById("cnn_t3").style.color = 'gray';
+  // document.getElementById("hide_show_btn").style.display = "none";
+  // document.getElementById("prediction").style.display = "none";
+  // document.getElementById("hidable").style.display = "none";
+  // document.getElementById("digit_form").style.display = "none";
+  // document.getElementById("answer_reaction").innerHTML = "";
+  // document.getElementById("rec_result").innerHTML = "";
+  // document.getElementById("fnn1").style.color = 'gray';
+  // document.getElementById("fnn2").style.color = 'gray';
+  // document.getElementById("fnn3").style.color = 'gray';
+  // document.getElementById("fnn_t1").style.color = 'gray';
+  // document.getElementById("fnn_t2").style.color = 'gray';
+  // document.getElementById("fnn_t3").style.color = 'gray';
+  // document.getElementById("cnn1").style.color = 'gray';
+  // document.getElementById("cnn2").style.color = 'gray';
+  // document.getElementById("cnn3").style.color = 'gray';
+  // document.getElementById("cnn_t1").style.color = 'gray';
+  // document.getElementById("cnn_t2").style.color = 'gray';
+  // document.getElementById("cnn_t3").style.color = 'gray';
 }
 
 //button events
@@ -275,14 +275,14 @@ function nothing() {
 function train() {
   var canvas = document.getElementById("canvas");
   var dataURL = canvas.toDataURL('image/jpg');
-  var params = JSON.stringify({image_base64: dataURL, tag: '1'});
+  var params = JSON.stringify({image_base64: dataURL, tag: '9'});
 
   var http = new XMLHttpRequest();
 
   http.onreadystatechange = function() {
     if (http.readyState == XMLHttpRequest.DONE) {
       if (http.status == 200) {
-        console.log('200 status');
+        clearCanvas();
       } else if (http.status == 400) {
         console.log('400 status');
       } else {
