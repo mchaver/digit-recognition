@@ -31,6 +31,7 @@ use rocket::response::NamedFile;
 
 extern crate image;
 use image::FilterType;
+use image::GenericImage;
 
 use std::fs;
 
@@ -74,6 +75,15 @@ fn get_file_count(path_name: String) -> Option<u32> {
     }
 }
 
+fn normalize_pixel(rgba: image::Rgba<u8>) -> f64 {
+    // (value-min)/(max-min)
+    // z_i = (x_i-min(x))/(max(x) - min(x))
+    //  x=(x_1,...,x_n) and z^i is now your ith normalized data
+    // ((rgba.data[0] as f64) + (rgba.data[1] as f64) + (rgba.data[2] as f64) + (rgba.data[3] as f64) - (std::u8::MIN as f64)) / ((std::u8::MAX as f64) - (std::u8::MIN as f64))
+    ((rgba.data[0] as f64) + (rgba.data[1] as f64) + (rgba.data[2] as f64) + (rgba.data[3] as f64) - (std::u8::MIN as f64)) / ((std::u8::MAX as f64) * 4.0)
+    // 255 + 255 + 255 + 255 / (255 * 4)
+}
+
 #[post("/train", format = "application/json", data = "<image>")]
 fn train(image: Json<DigitImageForTraining>) -> content::Json<String> {
     let img_string = image.image_base64.split(",").collect::<Vec<&str>>();
@@ -86,28 +96,28 @@ fn train(image: Json<DigitImageForTraining>) -> content::Json<String> {
                             Ok(_write_res) => {
                                 match image::open("temp.png") {
                                     Ok(img) => {
+                                        // let pxs = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>().iter().map(|(_,_,p)| normalize_pixel(p.clone()));
+                                        // let pxs = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
+                                        // let pxs2 = pxs.iter().map(|(_,_,p)| normalize_pixel(*p));
+                                        // println!("{}", pxs.len());
+                                        // println!("{}", pxs2.len());
                                         let dir_name = format!("./{}", image.tag);
                                         if !Path::new(&dir_name.clone()).exists() {
                                             fs::create_dir(dir_name.clone()).unwrap();
                                         }
                                         let paths = fs::read_dir(dir_name.clone()).unwrap().collect::<Vec<_>>();
                                         let count = paths.len();
-                                        // for path in paths {
-                                        //     let p = path.unwrap().path();
-                                        //     if p.is_file() {
-                                        //         match get_file_count(p.display().to_string()) {
-                                        //             Ok(count) => {
-                                        //                 if loc_count > count {
-                                        //                 count = loc_count;
-                                        //                 }
-                                        //             },
-                                        //             None => ()
-                                        //         }
-                                        //     }
-                                        // }
+
                                         let ref mut img_resized = img.resize_exact(28,28, FilterType::Nearest);
                                         let file_name = format!("./{}/{}.png", image.tag, count);
                                         img_resized.save(file_name).unwrap();
+
+                                        let pxs = img_resized.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
+                                        let pxs2 = pxs.iter().map(|(_,_,p)| normalize_pixel(*p));
+                                        println!("{}", pxs.len());
+                                        println!("{}", pxs2.len());
+                                        // array of 784
+                                        
                                         content::Json("{ 'result': 'image has been saved' }".to_string())
                                     },
                                     Err(err) => {

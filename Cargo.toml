@@ -21,6 +21,10 @@ name = "nn"
 path = "src/nn/lib.rs"
 
 [[bin]]
+name = "train"
+path = "src/train/bin/main.rs"
+
+[[bin]]
 name = "server"
 path = "src/server/bin/main.rs"
 

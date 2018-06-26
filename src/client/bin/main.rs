@@ -211,7 +211,6 @@ fn main() {
     let inputs_f64 = tof64(inputs);
     let targets_f64 = tof64(targets);
 
-
     for _i in 0..10000 {
         for pair in inputs_f64.iter().zip(targets_f64.iter()) {
             let p = backpropagate((hidden_layer.clone(), output_layer.clone()), pair.0.clone(), pair.1.clone());
