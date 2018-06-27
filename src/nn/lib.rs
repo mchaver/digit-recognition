@@ -34,7 +34,7 @@ pub fn feed_forward(hidden_layers: &Vec<Vec<f64>>, output_layers: &Vec<Vec<f64>>
     (hidden_outputs, outputs)
 }
 
-pub fn backpropagate(hidden_layers: &mut Vec<Vec<f64>>, output_layers: &mut Vec<Vec<f64>>, input_vector: Vec<f64>, targets: Vec<f64>) {
+pub fn backpropagate(hidden_layers: &mut Vec<Vec<f64>>, output_layers: &mut Vec<Vec<f64>>, input_vector: &Vec<f64>, targets: &Vec<f64>) {
     let (hidden_outputs, outputs) = feed_forward(&hidden_layers, &output_layers, &input_vector);
 
     // the output * (1 - output) is from the derivative of sigmoid
