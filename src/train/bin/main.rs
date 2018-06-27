@@ -21,15 +21,15 @@ extern crate serde_json;
 use std::fs::File;
 use std::io::prelude::*;
 
-fn normalize_pixel(rgba: image::Rgba<u8>) -> f64 {
-    let res = ((rgba.data[0] as f64) + (rgba.data[1] as f64) + (rgba.data[2] as f64) + (rgba.data[3] as f64) - (std::u8::MIN as f64)) / ((std::u8::MAX as f64) * 4.0);
-    if res > 0.9 {
-        0.0
-    } else {
-        1.0
-    }
-    // res
-}
+// fn normalize_pixel(rgba: image::Rgba<u8>) -> f64 {
+//     let res = ((rgba.data[0] as f64) + (rgba.data[1] as f64) + (rgba.data[2] as f64) + (rgba.data[3] as f64) - (std::u8::MIN as f64)) / ((std::u8::MAX as f64) * 4.0);
+//     if res > 0.9 {
+//         0.0
+//     } else {
+//         1.0
+//     }
+//     // res
+// }
 
 
 fn bounding_box(d: &Vec<u8>, w: usize, h: usize) -> ((u32,u32),(u32,u32)) {
@@ -116,13 +116,13 @@ fn bounding_box(d: &Vec<u8>, w: usize, h: usize) -> ((u32,u32),(u32,u32)) {
 //     // res
 // }
 
-// fn normalize_pixel(val: u8) -> f64 {
-//     if val == 255 {
-//         1.0
-//     } else {
-//         0.0
-//     }
-// }
+fn normalize_pixel(val: u8) -> f64 {
+    if val == 255 {
+        0.0
+    } else {
+        1.0
+    }
+}
 
 
 
@@ -299,7 +299,7 @@ fn main() {
     
 
     let input_size = 28 * 28; // each input is a vector of length 25
-    let num_hidden = 2;       // we'll have 5 neurons in the hidden layer
+    let num_hidden = 8;       // we'll have 5 neurons in the hidden layer
     let output_size = 10;     // we need 10 outputs for each input
 
     let mut rng = thread_rng();
@@ -327,78 +327,72 @@ fn main() {
 
     for i in 0 .. output_size {
         let i_string = i.to_string();
-        let dir = format!("./training_data/{}", i_string);
+        let dir = format!("./training_data_resized/{}", i_string);
 
         let paths = fs::read_dir(dir).unwrap();
         let mut inputs: Vec<Vec<f64>> = Vec::new();
         for (j, path) in paths.enumerate() {
             let path_str = path.unwrap().path().display().to_string();
 
-            //  if let ImageRgb8(img) = image::open("res/day3.png").unwrap() {
-            //let Result<ImageRgb8(oimg)> = image::open(path_str);
-            match image::open(path_str) {
+            match image::open(path_str.clone()) {
                 Ok(mut img) => {
-                    let pixels = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
-                    let normalized_pixels = pixels.iter().map(|(_,_,p)| normalize_pixel(*p)).collect::<Vec<_>>();
+                    //let pixels = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
+                    //let normalized_pixels = pixels.iter().map(|(_,_,p)| normalize_pixel(*p)).collect::<Vec<_>>();
+                    let pixels = img.grayscale().raw_pixels();
+                    let normalized_pixels = pixels.iter().map(|p| normalize_pixel(*p)).collect::<Vec<_>>();
                     // let pixels = img.grayscale().raw_pixels();
                     // let normalized_pixels = pixels.iter().map(|p| normalize_pixel(*p)).collect::<Vec<_>>();
                     // println!("{:?}", normalized_pixels);
                     // println!("avg: {}", avg(&normalized_pixels));
-                    let ((x0,y0),(x1,y1)) = bounding_box(&img.grayscale().raw_pixels(), 28, 28);
-                    println!("{},{},{},{}", x0, y0, x1, y1);
                     
-                    let img11 = img.crop(x0, y0, x1, y1); //.to_image();
-                    let img2 = imageops::resize(&img11, 28,28, FilterType::Nearest);
-                    // let img3 = img2.resize_exact(28,28, FilterType::Nearest);
-                    let target_path = format!("./training_data_resized/{}/{}.png", i_string, j.to_string());
-
-                    img2.save(target_path).unwrap();
+                    // let ((x0,y0),(x1,y1)) = bounding_box(&img.grayscale().raw_pixels(), 28, 28);
+                    // let img11 = img.crop(x0, y0, x1, y1);
+                    // let img2 = imageops::resize(&img11, 28,28, FilterType::Nearest);
+                    // let target_path = format!("./training_data_resized/{}/{}.png", i_string, j.to_string());
+                    // img2.save(target_path).unwrap();
 
                     inputs.push(normalized_pixels);
                 },
                 Err(err) => {
-                    println!("error: {}", err.to_string());
+                    println!("error: {}, path: {}", err.to_string(), path_str);
                 },
             }
         }
         input_layer.push(inputs.clone());
-        // println!("size of {}: {}", i, inputs.len());
     }
 
-    
+    for _j in 0..25 {
+        for i in 0 .. output_size {
+            let target = mk_target(i);
+            for input in &input_layer[i] {
+                backpropagate(&mut hidden_layer, &mut output_layer, input, &target);
+            }
+        }
+    }
 
-    // for _j in 0..600 {
-    //     for i in 0 .. output_size {
-    //         let target = mk_target(i);
-    //         for input in &input_layer[i] {
-    //             backpropagate(&mut hidden_layer, &mut output_layer, input, &target);
-    //         }
-    //     }
-    // }
-
-    let fp = format!("./training_data/0/0.png");
-    let img = image::open(fp).unwrap();
-    let pixels = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
-    let gray_pixels = img.grayscale().raw_pixels();
+    // let fp = format!("./training_data_resized/0/0.png");
+    // let img = image::open(fp).unwrap();
+    // let pixels = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
+    // let gray_pixels = img.grayscale().raw_pixels();
     // println!("{:?}", pixels);
     // println!("{:?}", gray_pixels);
-    // for i in 0 .. output_size {
-    //     let i_string = i.to_string();
-    //     let fp = format!("./training_data/{}/0.png", i_string);
-    //     let img = image::open(fp).unwrap();
-    //     // let normalized_pixels = img.grayscale().raw_pixels().iter().map(|x| *x as f64).collect::<Vec<_>>();
+    for i in 0 .. output_size {
+        let i_string = i.to_string();
+        let fp = format!("./training_data_resized/{}/1.png", i_string);
+        let img = image::open(fp).unwrap();
+        // let normalized_pixels = img.grayscale().raw_pixels().iter().map(|x| *x as f64).collect::<Vec<_>>();
 
-    //     // let pixels = img.grayscale().raw_pixels();
-    //     // let normalized_pixels = pixels.iter().map(|p| normalize_pixel(*p)).collect::<Vec<_>>();
-    //     let pixels = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
-    //     // let ImageRgb8(img) = image::open(fp).unwrap();    
-    //     // let pixels = img.raw_pixels().collect::<Vec<u8>>();
-    //     let normalized_pixels = pixels.iter().map(|(_,_,p)| normalize_pixel(*p)).collect::<Vec<_>>();
+        let pixels = img.grayscale().raw_pixels();
+        let normalized_pixels = pixels.iter().map(|p| normalize_pixel(*p)).collect::<Vec<_>>();
+        // let pixels = img.pixels().collect::<Vec<(u32,u32,image::Rgba<u8>)>>();
+        // let ImageRgb8(img) = image::open(fp).unwrap();    
+        // let pixels = img.raw_pixels().collect::<Vec<u8>>();
+        // let normalized_pixels = pixels.iter().map(|(_,_,p)| normalize_pixel(*p)).collect::<Vec<_>>();
         
-    //     let r1 = feed_forward(&hidden_layer, &output_layer, &normalized_pixels);
+        let r1 = feed_forward(&hidden_layer, &output_layer, &normalized_pixels);
 
-    //     println!("Guess for {}: {:?}", i_string, r1.1);
-    // }
+        println!("Guess for {}: {:?}", i_string, r1.1);
+    }
 
     mk_trained_data_files(&hidden_layer, &output_layer);    
 }
